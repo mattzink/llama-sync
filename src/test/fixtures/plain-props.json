@@ -1,0 +1,45 @@
+{
+  "default_generation_settings": {
+    "n_ctx": 4096,
+    "params": {
+      "temperature": 0.7,
+      "top_k": 40,
+      "top_p": 0.9,
+      "min_p": 0.05,
+      "max_tokens": -1,
+      "n_predict": -1
+    }
+  },
+  "total_slots": 1,
+  "model_alias": "qwen3-4b-instruct",
+  "model_ftype": "Q4_K_M",
+  "modalities": {
+    "vision": false,
+    "video": false,
+    "audio": false
+  },
+  "media_marker": "PLAIN-MARKER-SENTINEL-44-CHARS-FOR-TESTING-0987",
+  "chat_template": "{#- simple text-only template; no thinking, no effort -#}\n{{- __media__ }}\n{%- for m in messages %}{{- m['role'] }}: {{- m['content'] }}\\n{%- endfor %}\n",
+  "chat_template_caps": {
+    "supports_tools": false,
+    "supports_tool_calls": false,
+    "supports_parallel_tool_calls": false,
+    "supports_object_arguments": false,
+    "supports_reasoning_effort": false,
+    "supports_preserve_reasoning": false,
+    "supports_system_role": true,
+    "supports_string_content": true,
+    "supports_typed_content": true
+  },
+  "bos_token": "fixture-bos",
+  "eos_token": "fixture-eos",
+  "build_info": "llama.cpp b11277 (fixture)",
+  "is_sleeping": false,
+  "endpoint_slots": true,
+  "endpoint_props": false,
+  "endpoint_metrics": false,
+  "ui": true,
+  "ui_settings": {},
+  "cors_proxy_enabled": false,
+  "model_path": "/models/qwen3-4b-instruct.gguf"
+}

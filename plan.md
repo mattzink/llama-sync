@@ -1258,3 +1258,141 @@ Exit criteria: all unit tests green, typecheck green, checklist 1–12 pass.
 4. Local install + config migration (§5), run E2E checklist (§6.3).
 5. README, LICENSE, CI workflow; push to GitHub.
 6. `pnpm publish --access public`; switch this machine to the published spec.
+
+---
+
+## 10. Deviations from plan & implementation findings (2026-10-01)
+
+### 10.1 Tooling & packaging
+
+1. **Latest tool versions** (user instruction: use the latest available, per
+   plan §7): `typescript@7.0.2` (plan §3 assumed ^5.x-era), `vitest@5.0.3`
+   (assumed ^3.x-era), `@types/node@^26.6.3`, pnpm 12.4.2, Node 26
+   (`mise.toml`). All green.
+2. **`@opencode/plugin` pinned `^2.0.20`** (the version actually
+   implemented and tested against; package.json initially said `latest` —
+   repinned before publish so installs are reproducible).
+3. **Root `index.ts` added** (one-line re-export of `./src/index.js`):
+   OpenCode resolves *local-directory* plugin entries to `<dir>/server.*`
+   or `<dir>/index.*` at the directory root (`Host.resolve`); it does not
+   read `package.json` `exports` for that case. npm and git installs go
+   through `exports["."]` and are unaffected. Documented in README
+   (Development).
+
+### 10.2 Migration (plan §5)
+
+4. **Plan-strict overrides**: the migrated `options.overrides` carry
+   exactly the §5-prescribed content — `qwen3.8-27b-q5xl-dflash2` →
+   `name: "Qwen 3.8"` + 4 variants, `qwen3.8-27b-q4m-dflash2` →
+   `name: "Qwen 3.8 Fast"` + same 4 variants. Nothing extra.
+5. **Stale id corrected**: plan §5 line for the Fast model says
+   `qwen3.8-27b-q4-dflash2`; the actual preset id on the service is
+   `qwen3.8-27b-q4m-dflash2` (the migration uses the real id, so the
+   override matches the inventory).
+6. **Restart deferred to the end**: this development session runs *inside*
+   the live opencode service, so `opencode service restart` cannot run
+   mid-conversation. All plugin behavior was verified on an isolated
+   scratch instance (`serve --service` under a private XDG tree, same
+   provider config); the real `opencode.jsonc` is migrated last, with the
+   restart as the final user-visible step.
+
+### 10.3 E2E environment (plan §6.3)
+
+7. **Scratch API auth**: plain `serve` returns 401 on `/api/*` in this
+   deployment; the scratch ran with `serve --service`, whose Basic-auth
+   password (`opencode:<pw>`) is written to
+   `$XDG_STATE_HOME/opencode/state/opencode/service.json`.
+8. **Deterministic SSE verification via a local mock router**
+   (127.0.0.1:8091, Python, logs every request) instead of mutating the
+   live router: single emitted frame → exactly **one off-cycle**
+   `GET /v1/models` (PASS); 3-frame burst → 3 refreshes (scheduler
+   semantics, §10.4.13). Live-router SSE verified separately by
+   raw-socket frame capture and the router's `?reload=1` broadcast canary;
+   captured live frame: `data: {"model":"*","event":"models_reload"}`
+   (wildcard, no `data` field — `parseSseEvent` is event-name-agnostic).
+9. **Checklist coverage**: items 1–6, 9, 12 verified in E2E (item 5/6 via
+   mock emit; the live broadcast path via captured frame shape). Items 7–8
+   (stopping gpuz / recovery), 10 (load-state flip), 11 (plain
+   single-instance server) were **not** run live: destructive to the live
+   service (which is also this session's own provider) or impossible
+   locally (no `llama-server` binary on this machine) — covered by unit
+   tests and the §2.7-synthesized plain fixtures instead.
+10. **E2E harness lives in `/tmp/opencode/e2e`** (network tests, mock
+    router, socket probes, scratch XDG tree) with a symlinked
+    `node_modules` — the repo itself carries no E2E artifacts.
+11. **OpenCode repo moved**: the plugin-loader source of truth is now
+    `anomalyco/opencode` (v2.0.20), not `sst/opencode`.
+12. **Tooling quirk**: `ss` renders remote port 8080 as `http-alt`
+    (grepping for "8080" misses the router connection).
+
+### 10.4 Runtime findings (behavior verified; no code change beyond the plan)
+
+13. **Scheduler burst semantics** (mock-verified): a pending rerun bypasses
+    `minInterval`, and events arriving *during* an in-flight run chain
+    exactly one further rerun. A 3-frame burst straddling two in-flight
+    runs produced 3 refreshes — the initially-drafted test expectation of
+    "2" was wrong, not the code (matches §2.8 design).
+14. **Plugin re-activation semantics**: the supervisor takes an
+    index-aligned prefix diff of the `plugins` array — *any* edit
+    (including one that merely shifts an existing entry's index)
+    re-activates the plugin (full teardown + setup). Provider-section
+    edits (e.g. `baseURL`) also re-activate; the new setup reads the new
+    provider for both the refresh and the SSE connection (an early
+    observation that provider edits don't re-activate was refuted — it was
+    explained by the re-run setup using the new baseURL for both).
+15. **Startup / re-activation race**: plugin setup runs before provider
+    registration, so the first refresh is inert ("provider not found or
+    has no settings.baseURL") and the first SSE attempt fails; recovery
+    comes ~1 s later via the SSE-retry catch-up refresh (plain servers:
+    first 30 s poll). With a stored inventory, models are seeded from
+    storage at 0.0 s regardless (preseed verified: all 4 gpuz models
+    present at boot before the first successful refresh).
+16. **SSE idle close at ~300 s**: the Bun client stack closes the plugin's
+    idle SSE connection after ~5 minutes (the router sends no keepalives).
+    Evidence: a raw-socket probe survived 340 s idle (router and network
+    exonerated); the localhost mock stream survived its 283 s max idle
+    stretch (aborted by teardown just short of the mark); the old
+    scratch instance's close lines fit `connect + ~300 s` lifetimes
+    (first observed close at 298 s). The plugin handles it exactly as
+    designed: one warning, backoff reconnect (~1 s), immediate catch-up
+    refresh, `refreshMs` poll as backstop — worst-case staleness ≤ one
+    poll interval. Documented in README ("Stream lifetime"). The apparent
+    phase-lock of the close lines to the built-in 300 s models.dev catalog
+    refresh (`packages/core/src/models-dev.ts`, which emits
+    `provider.updated`/`model.updated` each cycle) is a log-interleave
+    artifact: the untimestamped plugin stdout lines fall into the same
+    5-minute log window as the catalog events.
+17. **Plugin console output**: with a directly-started
+    `serve --print-logs`, plugin `console.warn` lines appear in the
+    service log as raw, untimestamped `[llama-sync]` stdout lines
+    interleaved with structured lines (grep `\[llama-sync\]`). A healthy
+    run is completely silent (no publish on hash-equal refreshes, no
+    closes). E2E verification therefore relied on side effects (API
+    listings, `ss` sockets, the DB `kv` storage row, mock request logs)
+    rather than log lines.
+18. **Second ESTAB to the mock** observed during E2E is Bun's keep-alive
+    pool holding a second connection — not a second SSE stream.
+
+### 10.5 Code-level notes (implementation details vs plan prose)
+
+19. `createScheduler` lives in `src/sse.ts` (there is no
+    `src/scheduler.ts`; plan §4 layout wording).
+20. The `ctx.storage.set` value type is expressed as
+    `Parameters<Plugin.Context["storage"]["set"]>[1]` to avoid importing
+    Effect types in the plugin entry.
+21. **Probe-failure caching clarified**: a transient probe failure
+    (`"failed"`) is never cached terminally — `resolveEffort` reuses the
+    cache only when it is consistent with the current template digest
+    (preserving probed levels or the `probeUnsupported` flag), and a
+    static stand-in *without* `probeUnsupported` re-triggers the probe on
+    the next refresh (`shouldProbe`).
+22. **Aliases follow target visibility**: an alias whose target is present
+    in `/models` but *hidden* by `includeUnloaded: false` is skipped with
+    one warning (plan §4.3 only spelled out "target absent this poll").
+23. **Live template quirk**: the Qwen `reasoning_effort` jinja has an
+    *empty* `comparisons` array (plan fixtures assumed populated ones);
+    static derivation falls through the guard-preferred signal chain
+    (`props.ts`), which handles it — the derived set for gpuz still comes
+    out `low / medium / xhigh / no-think`.
+24. **Hygiene held**: `chat_template` (`__media__`) never reached storage,
+    logs, or hashes at any point (§2.2.1 discipline followed end-to-end).

@@ -1,0 +1,26 @@
+{
+  "data": [
+    {
+      "id": "qwen3-4b-instruct",
+      "aliases": [],
+      "tags": [],
+      "object": "model",
+      "owned_by": "llamacpp",
+      "created": 1790803842,
+      "meta": {
+        "vocab_type": 2,
+        "n_vocab": 151936,
+        "n_ctx": 4096,
+        "n_ctx_train": 40960,
+        "n_embd": 2560,
+        "n_params": 4989580288,
+        "size": 3813643008,
+        "ftype": "Q4_K_M"
+      }
+    }
+  ],
+  "models": [
+    { "name": "qwen3-4b-instruct" }
+  ],
+  "object": "list"
+}

@@ -1,0 +1,48 @@
+{
+  "default_generation_settings": {
+    "n_ctx": 160000,
+    "params": {
+      "temperature": 1,
+      "top_k": 20,
+      "top_p": 0.95,
+      "min_p": 0.0,
+      "max_tokens": -1,
+      "n_predict": -1,
+      "repeat_penalty": 1,
+      "presence_penalty": 0,
+      "frequency_penalty": 0
+    }
+  },
+  "total_slots": 1,
+  "model_alias": "qwen3.8-27b-q5xl-dflash2",
+  "model_ftype": "Q5_K - Medium",
+  "modalities": {
+    "vision": true,
+    "video": true,
+    "audio": false
+  },
+  "media_marker": "MEDIA-MARKER-SENTINEL-44-CHARS-FOR-TESTING-0123",
+  "chat_template": "{#- abridged fixture: stands in for the real ~10 KB template; __media__ is the media-placeholder tag -#}\n{%- if enable_thinking is defined and enable_thinking %}\n{%- if reasoning_effort|default('xhigh') not in ('xhigh','medium','low') %}\n{{- raise_exception(\"Supported types are xhigh (default), medium, and low.\") }}\n{%- endif %}\n{%- if reasoning_effort == 'high' %}\n{#- deprecated alias: 'high' renders as 'xhigh' -#}\n{%- endif %}\n{{- enable_thinking }}\n{%- endif %}\n{{- __media__ }}\n{{- content }}\n",
+  "chat_template_caps": {
+    "supports_tools": true,
+    "supports_tool_calls": true,
+    "supports_parallel_tool_calls": true,
+    "supports_object_arguments": true,
+    "supports_reasoning_effort": true,
+    "supports_preserve_reasoning": true,
+    "supports_system_role": true,
+    "supports_string_content": true,
+    "supports_typed_content": true
+  },
+  "bos_token": "fixture-bos",
+  "eos_token": "fixture-eos",
+  "build_info": "llama.cpp b11277 (fixture)",
+  "is_sleeping": false,
+  "endpoint_slots": true,
+  "endpoint_props": false,
+  "endpoint_metrics": false,
+  "ui": true,
+  "ui_settings": {},
+  "cors_proxy_enabled": false,
+  "model_path": "/models/qwen3.8-27b-q5xl-dflash2.gguf"
+}

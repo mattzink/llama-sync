@@ -1,0 +1,82 @@
+{
+  // Documented option set for llama-sync (plan §4.4).
+  //
+  // How to use: copy this file to `options.jsonc` next to src/index.ts when
+  // running from a checkout, or — the usual case — put the values you want in
+  // the plugin entry's `options` object in opencode.jsonc (that takes
+  // precedence per key). npm installs ship no sibling options file.
+  //
+  // The service URL is NOT an option here: the plugin reads settings.baseURL
+  // (and top-level headers) from the provider entry identified by providerID.
+
+  "providerID": "llamacpp",
+
+  // Endpoint paths (relative; propsPath is resolved against baseURL with a
+  // trailing /v1 stripped — llama.cpp serves /props at the root).
+  // "modelsPath": "/models",
+  // "propsPath": "/props",
+
+  // Unloaded router presets:
+  //   includeUnloaded: false — hidden
+  //   disableUnloaded: true  — visible but not selectable (wins)
+  // "includeUnloaded": true,
+  // "disableUnloaded": false,
+
+  // Poll interval (safety net with SSE on; sole trigger with SSE off / plain
+  // servers).
+  // "refreshMs": 30000,
+
+  // Router SSE change stream (router mode only; 404/405 disables it).
+  // "sse": true,
+
+  // Fetch timeout for the models list and every props call.
+  // "timeoutMs": 5000,
+
+  // Variant derivation.
+  // "autoVariants": true,
+  // "variantReasoningEfforts": ["low", "medium", "xhigh"],  // null = all template-found levels
+  // "noThinkVariant": true,
+  // One-time POST /apply-template render probe per template digest.
+  // "effortProbe": true,
+
+  // Applied to every discovered model (modalities/variants come from the
+  // endpoints, not here).
+  // "defaults": {
+  //   "limit": { "context": 160000, "output": 32768 },
+  //   "capabilities": { "tools": true },
+  //   "variants": []
+  // },
+
+  // Per-model overrides, keyed by discovered model id.
+  // `variants` replaces the derived set; `extraVariants` merges into it.
+  // "overrides": {
+  //   "some-model-id": {
+  //     "name": "Display Name",
+  //     "limit": { "context": 160000, "output": 32768 },
+  //     "capabilities": { "tools": true, "input": ["text", "image"], "output": ["text"] },
+  //     "variants": [
+  //       {
+  //         "id": "high",
+  //         "settings": { "chat_template_kwargs": { "enable_thinking": true, "reasoning_effort": "high" } }
+  //       },
+  //       { "id": "no-think", "settings": { "chat_template_kwargs": { "enable_thinking": false } } }
+  //     ]
+  //   }
+  // },
+
+  // Extra catalog entries aliasing a discovered model (id != modelID).
+  // "aliases": {
+  //   "short-name": "some-model-id",
+  //   "other-name": { "model": "some-model-id", "name": "Other Name" }
+  // },
+
+  // Props for unloaded models: "never" (default — the plugin never causes a
+  // load) or "autoload" (destructive on max_instances: 1 routers: a load can
+  // LRU-evict the active model).
+  // "propsForUnloaded": "never",
+
+  // Persist last-known props per model id so unloaded models keep their
+  // derived values (fresh props always win; entries evict on removal or
+  // n_ctx/--ctx-size mismatch).
+  // "propsCache": true
+}
