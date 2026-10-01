@@ -1289,12 +1289,24 @@ Exit criteria: all unit tests green, typecheck green, checklist 1–12 pass.
    `qwen3.8-27b-q4-dflash2`; the actual preset id on the service is
    `qwen3.8-27b-q4m-dflash2` (the migration uses the real id, so the
    override matches the inventory).
-6. **Restart deferred to the end**: this development session runs *inside*
-   the live opencode service, so `opencode service restart` cannot run
-   mid-conversation. All plugin behavior was verified on an isolated
-   scratch instance (`serve --service` under a private XDG tree, same
-   provider config); the real `opencode.jsonc` is migrated last, with the
-   restart as the final user-visible step.
+6. **Hot-reload migration, no restart needed**: this development session
+   runs *inside* the live opencode service (systemd `opencode.service`,
+   `serve --service` on port 80), so `opencode service restart` cannot run
+   mid-conversation. All plugin behavior was therefore verified on an
+   isolated scratch instance (`serve --service` under a private XDG tree,
+   same provider config) first; the real `opencode.jsonc` was then
+   migrated as a **single atomic write** (static `models` map removed +
+   `plugins` entry added in one file rewrite → one config reload). The
+   live service picked it up via its config watcher: `llama-sync` went
+   ACTIVE within seconds and published the full 4-model gpuz inventory
+   (verified via the live service API, including `video` input modality on
+   `q5xl-dflash2` from live `/props` — richer than the old static config).
+   The pre-migration config is saved as
+   `~/.config/opencode/opencode.jsonc.bak-20261001-llama-sync`. A
+   `opencode service restart` remains an optional clean-boot check, not a
+   requirement. The migration used the dev local-directory entry
+   (`"package": "/home/mattzink/llama-sync"` — the exact E2E-verified
+   shape); after npm publish it switches to the npm spec `"llama-sync"`.
 
 ### 10.3 E2E environment (plan §6.3)
 
@@ -1396,3 +1408,14 @@ Exit criteria: all unit tests green, typecheck green, checklist 1–12 pass.
     out `low / medium / xhigh / no-think`.
 24. **Hygiene held**: `chat_template` (`__media__`) never reached storage,
     logs, or hashes at any point (§2.2.1 discipline followed end-to-end).
+
+### 10.6 Publish status (2026-10-01)
+
+- Committed: `19a5746` on `main` (all code, tests, docs, packaging).
+- `git push` to `github.com/mattzink/llama-sync` and `npm publish
+  --access public` (name verified available per Q1) are **pending
+  credentials**: this machine has no GitHub auth (no gh CLI, no SSH key,
+  no credential store) and no `~/.npmrc` token (`npm whoami` →
+  ENEEDAUTH). Once auth exists: `git push -u origin main`, then
+  `pnpm publish --access public`, then flip the `package` value in the
+  migrated `opencode.jsonc` from the dev path to `"llama-sync"`.
