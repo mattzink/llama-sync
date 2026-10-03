@@ -1,6 +1,6 @@
 {
   "name": "llama-sync",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "OpenCode V2 plugin: dynamic model inventory for custom OpenAI-compatible (llama.cpp) providers",
   "type": "module",
   "exports": {
@@ -8,14 +8,35 @@
   },
   "files": [
     "src",
+    "!src/test",
     "README.md",
     "LICENSE",
     "options.example.jsonc"
   ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mattzink/llama-sync.git"
+  },
+  "homepage": "https://github.com/mattzink/llama-sync#readme",
+  "bugs": {
+    "url": "https://github.com/mattzink/llama-sync/issues"
+  },
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "plugin",
+    "llama.cpp",
+    "llama-server",
+    "models"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
   "packageManager": "pnpm@12.4.2",
   "scripts": {
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepublishOnly": "pnpm typecheck && pnpm test"
   },
   "dependencies": {
     "@opencode/plugin": "^2.0.20"

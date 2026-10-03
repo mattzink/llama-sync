@@ -145,6 +145,43 @@ plugin entries to `<dir>/index.*` (it does not read `package.json`
 `exports` for that case); npm and git installs resolve through `exports`
 and are unaffected by it.
 
+## Publishing
+
+Publishing is automated. Every push to `main` runs the `publish`
+workflow, which typechecks, tests, and — on success — publishes
+`1.0.<n>` to npm, where `<n>` is the workflow's build number
+(`GITHUB_RUN_NUMBER`). The `major.minor` base is read from
+`package.json` (currently `1.0.0`); bump it manually to move builds to
+a new base (e.g. `1.1.0` → `1.1.<n>`). Builds that fail before
+publishing leave gaps in the sequence.
+
+The workflow publishes via npm
+[trusted publishing](https://docs.npmjs.com/trusted-publishers) (OIDC):
+each run gets a short-lived token GitHub mints for that specific run of
+this specific workflow file — no npm token or repository secret is
+stored anywhere. The setup is one-time:
+
+1. Publish the base once from a checkout: `npm login`, then
+   `npm publish`. This creates the package, which is required before a
+   trusted publisher can be configured.
+2. npmjs.com → `llama-sync` → **Package settings → Trusted publishers
+   → Add**: GitHub Actions, organization/user `mattzink`, repository
+   `llama-sync`, workflow filename `publish.yml` — and tick
+   **Allow `npm publish`** (configurations created after 2026-09-03
+   default to *staged* publishing only, which would leave every build
+   awaiting manual approval).
+3. Push to `main`. The first automated release lands as `1.0.1`;
+   because the repository is public, npm attaches a provenance
+   attestation to each build automatically.
+
+Note: the `repository.url` in `package.json` must keep matching the
+GitHub repository exactly — npm validates it against the publisher
+configuration.
+
+Pin a specific build with `opencode plugin add llama-sync@1.0.42`. A
+manual publish from a checkout is `npm publish` (typecheck and tests
+run first via `prepublishOnly`).
+
 ## License
 
 [MIT](LICENSE)
