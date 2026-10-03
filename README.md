@@ -20,7 +20,12 @@ opencode plugin add llama-sync            # npm
 opencode plugin add github:mattzink/llama-sync   # git
 ```
 
-Then configure the provider as usual and add the plugin entry:
+The CLI adds the bare entry `"plugins": ["llama-sync"]` — that is all
+it can express (`plugin add` takes only a package spec, there is no
+options flag). That entry is fine as-is only if your provider is named
+`llamacpp` (the default `providerID`). Otherwise — or to override any
+other option — configure the provider as usual and replace the entry
+with the object form:
 
 ```jsonc
 {
@@ -40,9 +45,12 @@ Then configure the provider as usual and add the plugin entry:
 }
 ```
 
-The default `providerID` is `"llamacpp"`. **Install via an explicit
-`plugins` entry only** — don't move the package directory under
-`.opencode/plugins/` or another discovery path, or it will load twice.
+If models never appear with a bare entry, check the log for
+`provider "llamacpp" not found or has no settings.baseURL; plugin is
+inert` — the provider name doesn't match and the entry needs the
+object form above. **Install via an explicit `plugins` entry only** —
+don't move the package directory under `.opencode/plugins/` or another
+discovery path, or it will load twice.
 
 **First boot.** The plugin re-seeds the provider from the inventory it
 stored on its previous run, so the models are present in `/models`
